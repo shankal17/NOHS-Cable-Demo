@@ -14,4 +14,3 @@ config.graph_config = EasyDict()
 config.graph_config.x_margin = 2
 config.graph_config.y_margin = 2
 config.graph_config.grid = True
-
