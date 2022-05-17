@@ -104,8 +104,20 @@ def generate_inverse_catenary_eqn(c):
     function
         Inverse catenary equation
     """
-
+    print('c:', c)
     return lambda y: c * np.arccosh(y / c)
+
+def fit_parabola(config):
+    problem = config.problem
+    x_1, y_1 = problem.left_x_coordinate, problem.left_attach_height
+    x_2, y_2 = problem.midspan_x_coordinate, problem.midspan_height
+    x_3, y_3 = problem.right_x_coordinate, problem.right_attach_height
+    den = (x_1 - x_2) * (x_1 - x_3) * (x_2 - x_3)
+    a = (x_3 * (y_2 - y_1) + x_2 * (y_1 - y_3) + x_1 * (y_3 - y_2)) / den
+    b = ((x_3**2) * (y_1 - y_2) + (x_2**2) * (y_3 - y_1) + (x_1**2) * (y_2 - y_3)) / den
+    c = (x_2 * x_3 * (x_2 - x_3) * y_1 + x_3 * x_1 * (x_3 - x_1) * y_2 + x_1 * x_2 * (x_1 - x_2) * y_3) / den
+
+    return lambda x: a*(x**2) + b * x + c
 
 def solve_problem(config):
     """Solves catenary equation modeling rope or cable
@@ -130,7 +142,7 @@ def solve_problem(config):
     error_function = generate_reduced_error_eqn(h_1, h_2, l)
 
     # Solve for catenary parameter (Newton-Raphson Method)
-    c = newton_raphson(error_function)
+    c = newton_raphson(error_function, 0.01)
 
     # Generate inverse catenary
     inverse_catenary = generate_inverse_catenary_eqn(c)
@@ -142,16 +154,24 @@ def solve_problem(config):
     # Generate catenary equation that is transformed into world coordinates
     catenary = generate_transformed_catenary(c, x_translation, y_translation)
 
+    # Fit parabola
+    parabola = fit_parabola(config)
+
     # Plot da ting
     graph_config = config.graph_config
     x = np.linspace(0, l)
-    y = catenary(x)
+    y_cat = catenary(x)
+    y_para = parabola(x)
     fig, ax = plt.subplots()
-    ax.plot(x, y)
+    ax.plot(x, y_cat, color='lime', label='Catenary', lw=2)
+    ax.plot(x, y_para, color='m', label='Parabola', lw=2)
+    ax.legend()
     ax.set_aspect('equal')
     ax.grid(graph_config.grid)
     ax.set_xlim([-graph_config.x_margin, problem.span_length+graph_config.x_margin])
     ax.set_ylim([0, max(problem.left_attach_height, problem.right_attach_height)+graph_config.y_margin])
+    ax.set_xlabel('X coordinate')
+    ax.set_ylabel('Y coordinate')
 
     plt.show()
 
